@@ -23,6 +23,7 @@
 #define LIBMEDIA_IO_H
 
 #include <stdlib.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,6 +36,9 @@ enum media_type {
     MEDIA_TYPE_AUDIO,
     MEDIA_TYPE_VIDEO,
     MEDIA_TYPE_SUBTITLE,
+    MEDIA_TYPE_ATTACHMENT,
+    MEDIA_TYPE_DATA,
+    MEDIA_TYPE_MAX
 };
 
 
@@ -58,25 +62,17 @@ struct media_packet {
         struct video_packet *video;
     };
     enum media_type type;
-    void *opaque;
 };
 
-struct media_packet *media_packet_create(enum media_type type, void *data,
-                                         size_t len);
-void media_packet_destroy(struct media_packet *packet);
-
-struct media_attr {
-    union {
-        struct audio_attr audio;
-        struct video_attr video;
-    };
-    enum media_type type;
-};
+struct media_packet *media_packet_create(enum media_type type, void *data, size_t len);
+void media_packet_destroy(struct media_packet *mp);
+struct media_packet *media_packet_copy(const struct media_packet *src);
+size_t media_packet_get_size(struct media_packet *mp);
 
 struct media_encoder {
     union {
-        struct audio_encoder *audio;
-        struct video_encoder *video;
+        struct audio_encoder audio;
+        struct video_encoder video;
     };
     enum media_type type;
 };

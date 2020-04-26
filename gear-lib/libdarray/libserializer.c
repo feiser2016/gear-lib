@@ -23,6 +23,10 @@
 #include "libdarray.h"
 #include "libserializer.h"
 
+struct array_data {
+	DARRAY(uint8_t) bytes;
+};
+
 static size_t array_write(void *param, const void *data, size_t size)
 {
     struct array_data *da = param;
@@ -30,10 +34,10 @@ static size_t array_write(void *param, const void *data, size_t size)
     return size;
 }
 
-static int64_t array_getpos(void *param)
+static size_t array_getpos(void *param)
 {
     struct array_data *da = param;
-    return (int64_t)da->bytes.num;
+    return (size_t)da->bytes.num;
 }
 
 static void array_free(void *param)
@@ -42,10 +46,11 @@ static void array_free(void *param)
     da_free(da->bytes);
 }
 
-int serializer_array_init(struct serializer *s, struct array_data *data)
+int serializer_array_init(struct serializer *s)
 {
+    struct array_data *data = calloc(1, sizeof(struct array_data));
     memset(s, 0, sizeof(struct serializer));
-    memset(data, 0, sizeof(struct array_data));
+    da_init(data->bytes);
     s->data   = data;
     s->read   = NULL;
     s->write  = array_write;
@@ -54,10 +59,25 @@ int serializer_array_init(struct serializer *s, struct array_data *data)
     return 0;
 }
 
+int serializer_array_get_data(struct serializer *s, uint8_t **output, size_t *size)
+{
+    struct array_data *data = s->data;
+    *output = data->bytes.array;
+    *size = data->bytes.num;
+    return 0;
+}
+
+void serializer_array_reset(struct serializer *s)
+{
+    struct array_data *data = s->data;
+    memset(data, 0, sizeof(struct array_data));
+}
+
 void serializer_array_deinit(struct serializer *s)
 {
     if (s->data)
-        free(s->data);
+        s->free(s->data);
+    free(s->data);
     memset(s, 0, sizeof(struct serializer));
 }
 
@@ -71,7 +91,7 @@ static size_t file_write(void *file, const void *data, size_t size)
     return fwrite(data, 1, size, file);
 }
 
-static int64_t file_getpos(void *file)
+static size_t file_getpos(void *file)
 {
     return ftell(file);
 }
@@ -110,7 +130,7 @@ size_t s_write(struct serializer *s, const void *data, size_t size)
     return 0;
 }
 
-int64_t s_getpos(struct serializer *s)
+size_t s_getpos(struct serializer *s)
 {
     if (s && s->getpos)
         return s->getpos(s->data);
